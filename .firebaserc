@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "library-os-b6737"
+  },
+  "targets": {
+    "library-os-b6737": {
+      "hosting": {
+        "libos-in": [
+          "libos-in"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

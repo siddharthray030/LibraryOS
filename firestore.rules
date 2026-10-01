@@ -1,0 +1,148 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions for Role-Based Access Control ───────────────────────
+    function getRole() {
+      return request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        : '';
+    }
+
+    function isAdmin() {
+      return getRole() == 'admin' || getRole() == 'ADMIN';
+    }
+
+    function isLibrarian() {
+      return getRole() == 'librarian' || getRole() == 'LIBRARIAN';
+    }
+
+    function isAssistant() {
+      return getRole() == 'assistant' || getRole() == 'ASSISTANT';
+    }
+
+    function isStaff() {
+      return isAdmin() || isLibrarian() || isAssistant();
+    }
+
+    // ── Users collection (Staff Management) ───────────────────────────────────
+    // Staff can read their own profile; Admins can read all profiles and manage staff.
+    match /users/{userId} {
+      allow read:   if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (request.auth != null && request.auth.uid == userId && !('role' in request.resource.data));
+      allow delete: if isAdmin() && request.auth.uid != userId; // Admins cannot delete their own profile
+    }
+
+    // ── Books ────────────────────────────────────────────────────────────────
+    // Staff can view. Admins and Librarians can add, edit, delete. Assistants can view/add/edit if allowed.
+    match /books/{bookId} {
+      allow read:   if isStaff();
+      allow create: if isStaff()
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.totalQuantity is int
+        && request.resource.data.totalQuantity >= 1
+        && request.resource.data.availableQuantity is int
+        && request.resource.data.availableQuantity >= 0
+        && request.resource.data.availableQuantity <= request.resource.data.totalQuantity;
+      allow update: if isStaff()
+        && (request.resource.data.availableQuantity is int
+            ? (request.resource.data.availableQuantity >= 0
+               && request.resource.data.availableQuantity <= request.resource.data.totalQuantity)
+            : true);
+      allow delete: if isAdmin() || isLibrarian(); // Assistants cannot delete books
+    }
+
+    // ── Students ─────────────────────────────────────────────────────────────
+    match /students/{studentId} {
+      allow read:   if isStaff();
+      allow create: if isStaff()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0;
+      allow update: if isStaff();
+      allow delete: if isAdmin() || isLibrarian(); // Assistants cannot delete students
+    }
+
+    // ── Issued Books (Circulation) ───────────────────────────────────────────
+    match /issuedBooks/{issueId} {
+      allow read:   if isStaff();
+      allow create: if isStaff()
+        && request.resource.data.status == 'issued'
+        && request.resource.data.bookId is string
+        && request.resource.data.studentId is string;
+      allow update: if isStaff()
+        // Prevent re-returning: if current status is "returned", block updating to returned again
+        && !(resource.data.status == 'returned' && request.resource.data.status == 'returned');
+      allow delete: if isAdmin();
+    }
+
+    // ── Legacy loans collection (backward compat) ────────────────────────────
+    match /loans/{loanId} {
+      allow read:  if isStaff();
+      allow write: if isStaff();
+    }
+
+    // ── Legacy members collection (backward compat) ──────────────────────────
+    match /members/{memberId} {
+      allow read:  if isStaff();
+      allow write: if isStaff();
+    }
+
+    // ── Library Settings ─────────────────────────────────────────────────────
+    // All staff can read settings (for fine rates, loan periods). Only Admins can modify.
+    match /settings/{settingId} {
+      allow read:  if isStaff();
+      allow write: if isAdmin()
+        && (request.resource.data.finePerDay    == null || request.resource.data.finePerDay    is number)
+        && (request.resource.data.gracePeriod   == null || request.resource.data.gracePeriod   is number)
+        && (request.resource.data.maximumFine   == null || request.resource.data.maximumFine   is number)
+        && (request.resource.data.lowStockThreshold == null || request.resource.data.lowStockThreshold is number)
+        && (request.resource.data.loanPeriodDays == null || request.resource.data.loanPeriodDays is number);
+    }
+
+    // ── Activity Logs ────────────────────────────────────────────────────────
+    // Only Admins can read audit logs. All staff operations can write to the log.
+    // Immutable audit trail: no updates or deletes permitted.
+    match /activityLogs/{logId} {
+      allow read:   if isAdmin();
+      allow create: if isStaff()
+        && request.resource.data.action is string
+        && request.resource.data.timestamp is timestamp
+        // NEVER allow logging passwords, tokens, or credentials
+        && !('password'    in request.resource.data)
+        && !('token'       in request.resource.data)
+        && !('secret'      in request.resource.data)
+        && !('credential'  in request.resource.data);
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── Reminder Logs (Email reminders tracking) ─────────────────────────────
+    // Immutable log of sent reminders. Admins and Librarians can read and create.
+    match /reminderLogs/{logId} {
+      allow read:   if isAdmin() || isLibrarian();
+      allow create: if (isAdmin() || isLibrarian())
+        && request.resource.data.issueId is string
+        && request.resource.data.timestamp is timestamp;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── Audit Logs (Legacy auth events) ──────────────────────────────────────
+    match /auditLogs/{logId} {
+      allow create: if request.resource.data.keys().hasOnly(['timestamp','event','identifier','userAgent','details'])
+                    && request.resource.data.event is string
+                    && request.resource.data.timestamp is timestamp;
+      allow read:   if isAdmin();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── Default: deny everything not explicitly allowed ───────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
