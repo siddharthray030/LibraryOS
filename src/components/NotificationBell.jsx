@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, X, CheckCheck, Trash2, Filter } from 'lucide-react';
+import { Bell, X, CheckCheck, Trash2 } from 'lucide-react';
 import { useNotifications } from '../context/NotificationsContext';
 
 const SEVERITY_STYLES = {
-  error:   { bg: 'bg-red-950/40 border-red-800/40',   dot: 'bg-[#ef4444]', text: 'text-[#ef4444]' },
-  warning: { bg: 'bg-amber-950/30 border-amber-800/30', dot: 'bg-[#f5a623]', text: 'text-[#f5a623]' },
-  info:    { bg: 'bg-blue-950/30 border-blue-800/30',  dot: 'bg-[#60a5fa]', text: 'text-[#60a5fa]' },
+  error:   { bg: 'bg-red-950/40 border-red-800/40',    dot: 'bg-[#ef4444]' },
+  warning: { bg: 'bg-amber-950/30 border-amber-800/30', dot: 'bg-[#f5a623]' },
+  info:    { bg: 'bg-blue-950/30 border-blue-800/30',   dot: 'bg-[#60a5fa]' },
 };
 
 function formatTimeAgo(timestamp) {
@@ -24,7 +24,17 @@ export default function NotificationBell({ onNavigate }) {
   const { notifications, unreadCount, readIds, markRead, markAllRead, clearAll } = useNotifications();
   const [open, setOpen] = useState(false);
   const [filterCat, setFilterCat] = useState('all');
+  const [bellKey, setBellKey] = useState(0); // key trick to retrigger animation
+  const prevUnread = useRef(unreadCount);
   const ref = useRef(null);
+
+  // Wobble bell when new notification arrives
+  useEffect(() => {
+    if (unreadCount > prevUnread.current) {
+      setBellKey(k => k + 1);
+    }
+    prevUnread.current = unreadCount;
+  }, [unreadCount]);
 
   // Close on outside click
   useEffect(() => {
@@ -38,11 +48,11 @@ export default function NotificationBell({ onNavigate }) {
     : notifications.filter(n => n.category === filterCat);
 
   const categories = [
-    { id: 'all', label: 'All' },
-    { id: 'overdue', label: 'Overdue' },
-    { id: 'due_soon', label: 'Due Soon' },
+    { id: 'all',       label: 'All' },
+    { id: 'overdue',   label: 'Overdue' },
+    { id: 'due_soon',  label: 'Due Soon' },
     { id: 'low_stock', label: 'Stock' },
-    { id: 'fine', label: 'Fines' },
+    { id: 'fine',      label: 'Fines' },
   ];
 
   const handleNotificationClick = (n) => {
@@ -59,20 +69,31 @@ export default function NotificationBell({ onNavigate }) {
   return (
     <div ref={ref} className="relative">
       <button
+        key={bellKey}
         onClick={() => setOpen(o => !o)}
-        className="relative flex items-center justify-center w-9 h-9 rounded-xl border border-[#1e2330] bg-[#131720] text-[#6b7280] hover:text-white hover:bg-[#1a2035] transition-colors"
-        aria-label="Notifications"
+        className={[
+          'relative flex items-center justify-center w-9 h-9 rounded-xl border border-[#1e2330] bg-[#131720]',
+          'text-[#6b7280] hover:text-white hover:bg-[#1a2035] transition-colors btn-interactive',
+          bellKey > 0 ? 'anim-bell' : '',
+        ].join(' ')}
+        aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+        aria-expanded={open}
       >
         <Bell size={17} />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-[#ef4444] text-white text-[9px] font-bold rounded-full px-1 shadow-md">
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-[#ef4444] text-white text-[9px] font-bold rounded-full px-1 shadow-md anim-scale-in">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-11 z-[200] w-88 bg-[#131720] border border-[#1e2330] rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+        <div
+          className="absolute right-0 top-11 z-[200] w-88 bg-[#131720] border border-[#1e2330] rounded-2xl shadow-2xl overflow-hidden flex flex-col anim-fade-down"
+          style={{ width: 352 }}
+          role="dialog"
+          aria-label="Notification center"
+        >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#1e2330] bg-[#0b0f1a]">
             <div className="flex items-center gap-2">
@@ -89,7 +110,7 @@ export default function NotificationBell({ onNavigate }) {
                 <button
                   onClick={markAllRead}
                   title="Mark all as read"
-                  className="p-1 text-[#6b7280] hover:text-[#10b981] transition-colors"
+                  className="p-1 text-[#6b7280] hover:text-[#10b981] transition-colors btn-interactive rounded"
                 >
                   <CheckCheck size={14} />
                 </button>
@@ -97,11 +118,14 @@ export default function NotificationBell({ onNavigate }) {
               <button
                 onClick={() => { clearAll(); setOpen(false); }}
                 title="Clear all"
-                className="p-1 text-[#6b7280] hover:text-[#ef4444] transition-colors"
+                className="p-1 text-[#6b7280] hover:text-[#ef4444] transition-colors btn-interactive rounded"
               >
                 <Trash2 size={13} />
               </button>
-              <button onClick={() => setOpen(false)} className="p-1 text-[#6b7280] hover:text-white transition-colors">
+              <button
+                onClick={() => setOpen(false)}
+                className="p-1 text-[#6b7280] hover:text-white transition-colors btn-interactive rounded"
+              >
                 <X size={14} />
               </button>
             </div>
@@ -113,7 +137,7 @@ export default function NotificationBell({ onNavigate }) {
               <button
                 key={cat.id}
                 onClick={() => setFilterCat(cat.id)}
-                className={`px-2.5 py-1 rounded-lg font-medium transition-colors whitespace-nowrap ${
+                className={`px-2.5 py-1 rounded-lg font-medium transition-colors whitespace-nowrap btn-interactive ${
                   filterCat === cat.id
                     ? 'bg-[#f5a623]/15 text-[#f5a623] font-bold'
                     : 'text-[#6b7280] hover:text-[#d1d5db]'
@@ -127,25 +151,32 @@ export default function NotificationBell({ onNavigate }) {
           {/* List */}
           <div className="max-h-80 overflow-y-auto divide-y divide-[#1e2330]">
             {filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 gap-2 text-center px-4">
+              <div className="flex flex-col items-center justify-center py-10 gap-2 text-center px-4 anim-fade-up">
                 <Bell size={24} className="text-[#374151]" />
                 <p className="text-[#6b7280] text-xs">No notifications in this category.</p>
               </div>
             ) : (
-              filtered.map(n => {
+              filtered.map((n, i) => {
                 const isRead = readIds.has(n.id);
                 const sty    = SEVERITY_STYLES[n.severity] || SEVERITY_STYLES.info;
                 return (
                   <div
                     key={n.id}
-                    className={`px-4 py-3 cursor-pointer hover:bg-[#1a2035] transition-colors ${!isRead ? 'bg-[#0b0f1a]/80' : ''}`}
+                    className={[
+                      'px-4 py-3 cursor-pointer hover:bg-[#1a2035] anim-fade-up',
+                      `anim-delay-${Math.min(i + 1, 8)}`,
+                      !isRead ? 'bg-[#0b0f1a]/80' : '',
+                      // Smooth opacity transition when marking as read
+                      'transition-opacity duration-200',
+                    ].join(' ')}
+                    style={{ animationDelay: `${i * 25}ms` }}
                     onClick={() => handleNotificationClick(n)}
                   >
                     <div className="flex items-start gap-3">
                       <span className="text-base leading-none mt-0.5">{n.icon}</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1">
-                          <span className={`text-xs font-semibold truncate ${isRead ? 'text-[#9ca3af]' : 'text-white'}`}>
+                          <span className={`text-xs font-semibold truncate transition-colors duration-200 ${isRead ? 'text-[#9ca3af]' : 'text-white'}`}>
                             {n.title}
                           </span>
                           <span className="text-[10px] text-[#4b5563] shrink-0 font-mono">

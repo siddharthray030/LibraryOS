@@ -3,7 +3,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { findBookByCode } from '../../services/firestore';
 import {
   Camera, Keyboard, X, Search, CheckCircle2, AlertTriangle,
-  ArrowRight, BookOpen, RefreshCw, Barcode as BarcodeIcon,
+  ArrowRight, RefreshCw, Barcode as BarcodeIcon,
 } from 'lucide-react';
 
 export default function BookScannerModal({ isOpen, onClose, onSelectBook, onIssueBook, onReturnBook }) {
@@ -33,9 +33,7 @@ export default function BookScannerModal({ isOpen, onClose, onSelectBook, onIssu
   };
 
   useEffect(() => {
-    return () => {
-      stopCamera();
-    };
+    return () => { stopCamera(); };
   }, []);
 
   useEffect(() => {
@@ -52,7 +50,6 @@ export default function BookScannerModal({ isOpen, onClose, onSelectBook, onIssu
     if (!rawCode) return;
     let cleanCode = String(rawCode).trim();
 
-    // If QR payload is JSON string, parse it
     try {
       if (cleanCode.startsWith('{') && cleanCode.endsWith('}')) {
         const parsed = JSON.parse(cleanCode);
@@ -67,14 +64,13 @@ export default function BookScannerModal({ isOpen, onClose, onSelectBook, onIssu
       const book = await findBookByCode(cleanCode);
       if (book) {
         setFoundBook(book);
-        // Play subtle success feedback sound or pause camera
         if (scannerRef.current && scannerRef.current.isScanning) {
           await scannerRef.current.pause(true);
         }
       } else {
         setSearchError(`No book found matching code: "${cleanCode}". Try checking the ISBN or Barcode.`);
       }
-    } catch (err) {
+    } catch {
       setSearchError('Error searching book database.');
     } finally {
       setSearching(false);
@@ -87,7 +83,6 @@ export default function BookScannerModal({ isOpen, onClose, onSelectBook, onIssu
     setSearchError(null);
 
     try {
-      // Check if camera is available
       const devices = await Html5Qrcode.getCameras();
       if (!devices || devices.length === 0) {
         setCameraError('No camera devices detected on this device. Use manual entry below.');
@@ -98,21 +93,13 @@ export default function BookScannerModal({ isOpen, onClose, onSelectBook, onIssu
       const html5QrCode = new Html5Qrcode(readerElementId);
       scannerRef.current = html5QrCode;
 
-      const config = {
-        fps: 10,
-        qrbox: { width: 250, height: 180 },
-        aspectRatio: 1.333334,
-      };
+      const config = { fps: 10, qrbox: { width: 250, height: 180 }, aspectRatio: 1.333334 };
 
       await html5QrCode.start(
         { facingMode: 'environment' },
         config,
-        (decodedText) => {
-          handleBookCodeFound(decodedText);
-        },
-        () => {
-          // ignore scan frame misses
-        }
+        (decodedText) => { handleBookCodeFound(decodedText); },
+        () => {} // ignore scan frame misses
       );
 
       setCameraActive(true);
@@ -150,8 +137,11 @@ export default function BookScannerModal({ isOpen, onClose, onSelectBook, onIssu
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-[#131720] border border-[#1e2330] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 anim-overlay"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-[#131720] border border-[#1e2330] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] anim-modal">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e2330]">
           <div className="flex items-center gap-2.5">
@@ -163,7 +153,10 @@ export default function BookScannerModal({ isOpen, onClose, onSelectBook, onIssu
               <p className="text-[#6b7280] text-xs">Barcode, QR Code, or ISBN lookup</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-[#6b7280] hover:text-white p-1 rounded-lg">
+          <button
+            onClick={onClose}
+            className="text-[#6b7280] hover:text-white p-1 rounded-lg btn-interactive"
+          >
             <X size={18} />
           </button>
         </div>
@@ -192,42 +185,50 @@ export default function BookScannerModal({ isOpen, onClose, onSelectBook, onIssu
         <div className="p-6 overflow-y-auto space-y-4">
           {/* CAMERA TAB */}
           {tab === 'camera' && (
-            <div className="space-y-4">
+            <div className="space-y-4 anim-fade-in">
               {!cameraActive && !foundBook && (
                 <div className="bg-[#0b0f1a] border border-[#1e2330] rounded-xl p-8 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-[#1e2330] flex items-center justify-center mx-auto text-[#f5a623]">
+                  <div className="w-12 h-12 rounded-full bg-[#1e2330] flex items-center justify-center mx-auto text-[#f5a623] anim-scale-in">
                     <Camera size={24} />
                   </div>
-                  <div>
+                  <div className="anim-fade-up anim-delay-1">
                     <h3 className="text-white text-sm font-semibold">Ready to Scan</h3>
                     <p className="text-[#6b7280] text-xs mt-1 max-w-xs mx-auto">
                       Click below to request camera permission and point at any book barcode or QR code.
                     </p>
                   </div>
                   {cameraError && (
-                    <div className="bg-red-950/40 border border-red-800/40 text-[#ef4444] text-xs p-2.5 rounded-lg flex items-center gap-2 text-left">
+                    <div className="bg-red-950/40 border border-red-800/40 text-[#ef4444] text-xs p-2.5 rounded-lg flex items-center gap-2 text-left anim-fade-up">
                       <AlertTriangle size={15} className="shrink-0" />
                       <span>{cameraError}</span>
                     </div>
                   )}
                   <button
                     onClick={startCamera}
-                    className="px-5 py-2.5 bg-[#f5a623] text-black font-bold text-xs rounded-lg hover:bg-[#e09515] transition-colors"
+                    className="px-5 py-2.5 bg-[#f5a623] text-black font-bold text-xs rounded-lg hover:bg-[#e09515] btn-interactive anim-fade-up anim-delay-2"
                   >
                     Start Camera Scanning
                   </button>
                 </div>
               )}
 
-              {/* Viewport container */}
-              <div
-                id={readerElementId}
-                className={`w-full overflow-hidden rounded-xl border border-[#1e2330] bg-black ${!cameraActive || foundBook ? 'hidden' : 'block'}`}
-                style={{ minHeight: '220px' }}
-              />
+              {/* Camera viewport — animated scanning line overlaid */}
+              <div className="relative">
+                <div
+                  id={readerElementId}
+                  className={`w-full overflow-hidden rounded-xl border border-[#1e2330] bg-black ${!cameraActive || foundBook ? 'hidden' : 'block'}`}
+                  style={{ minHeight: '220px' }}
+                />
+                {/* Scan line overlay */}
+                {cameraActive && !foundBook && (
+                  <div className="absolute inset-0 pointer-events-none rounded-xl overflow-hidden" style={{ display: cameraActive ? 'block' : 'none' }}>
+                    <div className="scan-line" />
+                  </div>
+                )}
+              </div>
 
               {cameraActive && !foundBook && (
-                <div className="flex items-center justify-between text-xs text-[#6b7280]">
+                <div className="flex items-center justify-between text-xs text-[#6b7280] anim-fade-up">
                   <span className="flex items-center gap-1.5 text-[#10b981]">
                     <span className="w-2 h-2 rounded-full bg-[#10b981] animate-ping" /> Camera Active
                   </span>
@@ -241,7 +242,7 @@ export default function BookScannerModal({ isOpen, onClose, onSelectBook, onIssu
 
           {/* MANUAL TAB */}
           {tab === 'manual' && (
-            <form onSubmit={handleManualSubmit} className="space-y-3">
+            <form onSubmit={handleManualSubmit} className="space-y-3 anim-fade-in">
               <label className="block text-[#6b7280] text-[10px] uppercase tracking-widest font-semibold">
                 Enter Barcode, ISBN, or Library ID
               </label>
@@ -252,13 +253,13 @@ export default function BookScannerModal({ isOpen, onClose, onSelectBook, onIssu
                   value={manualCode}
                   onChange={e => setManualCode(e.target.value)}
                   placeholder="e.g. 9780132350884, LIB-235088..."
-                  className="w-full bg-[#0b0f1a] border border-[#1e2330] text-white text-sm pl-10 pr-24 py-2.5 rounded-xl outline-none focus:border-[#f5a623] font-mono"
+                  className="w-full bg-[#0b0f1a] border border-[#1e2330] text-white text-sm pl-10 pr-24 py-2.5 rounded-xl outline-none input-animated font-mono focus:border-[#f5a623]"
                   autoFocus
                 />
                 <button
                   type="submit"
                   disabled={searching || !manualCode.trim()}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#f5a623] text-black text-xs font-bold rounded-lg hover:bg-[#e09515] disabled:opacity-50 transition-colors"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#f5a623] text-black text-xs font-bold rounded-lg hover:bg-[#e09515] disabled:opacity-50 btn-interactive"
                 >
                   {searching ? 'Finding…' : 'Find'}
                 </button>
@@ -268,14 +269,14 @@ export default function BookScannerModal({ isOpen, onClose, onSelectBook, onIssu
 
           {/* Loading feedback */}
           {searching && (
-            <div className="flex items-center justify-center gap-2 py-4 text-xs text-[#f5a623]">
-              <RefreshCw size={14} className="animate-spin" /> Looking up book in catalogue...
+            <div className="flex items-center justify-center gap-2 py-4 text-xs text-[#f5a623] anim-fade-in">
+              <RefreshCw size={14} className="anim-spin" /> Looking up book in catalogue...
             </div>
           )}
 
           {/* Search error feedback */}
           {searchError && !searching && (
-            <div className="bg-red-950/30 border border-red-800/40 rounded-xl p-3.5 text-xs text-[#ef4444] flex items-start gap-2.5">
+            <div className="bg-red-950/30 border border-red-800/40 rounded-xl p-3.5 text-xs text-[#ef4444] flex items-start gap-2.5 anim-fade-up">
               <AlertTriangle size={15} className="shrink-0 mt-0.5" />
               <div className="flex-1">
                 <div>{searchError}</div>
@@ -289,12 +290,12 @@ export default function BookScannerModal({ isOpen, onClose, onSelectBook, onIssu
             </div>
           )}
 
-          {/* Book Found Card */}
+          {/* Book Found Card — scales in on success */}
           {foundBook && (
-            <div className="bg-[#0b0f1a] border border-[#10b981]/40 rounded-xl p-4 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-[#0b0f1a] border border-[#10b981]/40 rounded-xl p-4 space-y-4 anim-modal">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-950/60 border border-emerald-800/50 flex items-center justify-center text-[#10b981] shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-950/60 border border-emerald-800/50 flex items-center justify-center text-[#10b981] shrink-0 anim-success">
                     <CheckCircle2 size={20} />
                   </div>
                   <div>
@@ -331,39 +332,30 @@ export default function BookScannerModal({ isOpen, onClose, onSelectBook, onIssu
               <div className="flex flex-wrap gap-2 pt-1">
                 {(foundBook.availableQuantity ?? foundBook.available ?? 0) > 0 ? (
                   <button
-                    onClick={() => {
-                      onClose();
-                      onIssueBook ? onIssueBook(foundBook) : onSelectBook?.(foundBook);
-                    }}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-[#f5a623] text-black text-xs font-bold rounded-lg hover:bg-[#e09515] transition-colors"
+                    onClick={() => { onClose(); onIssueBook ? onIssueBook(foundBook) : onSelectBook?.(foundBook); }}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-[#f5a623] text-black text-xs font-bold rounded-lg hover:bg-[#e09515] btn-interactive"
                   >
                     Issue This Book <ArrowRight size={13} />
                   </button>
                 ) : (
                   <button
-                    onClick={() => {
-                      onClose();
-                      onReturnBook ? onReturnBook(foundBook) : onSelectBook?.(foundBook);
-                    }}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-[#10b981] text-black text-xs font-bold rounded-lg hover:bg-[#059669] transition-colors"
+                    onClick={() => { onClose(); onReturnBook ? onReturnBook(foundBook) : onSelectBook?.(foundBook); }}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-[#10b981] text-black text-xs font-bold rounded-lg hover:bg-[#059669] btn-interactive"
                   >
                     Return This Book <ArrowRight size={13} />
                   </button>
                 )}
 
                 <button
-                  onClick={() => {
-                    onClose();
-                    onSelectBook?.(foundBook);
-                  }}
-                  className="px-3 py-2 border border-[#374151] text-[#d1d5db] text-xs font-medium rounded-lg hover:bg-[#131720] transition-colors"
+                  onClick={() => { onClose(); onSelectBook?.(foundBook); }}
+                  className="px-3 py-2 border border-[#374151] text-[#d1d5db] text-xs font-medium rounded-lg hover:bg-[#131720] btn-interactive"
                 >
                   View Details
                 </button>
 
                 <button
                   onClick={handleScanAnother}
-                  className="px-3 py-2 text-[#9ca3af] text-xs hover:text-white transition-colors"
+                  className="px-3 py-2 text-[#9ca3af] text-xs hover:text-white btn-interactive"
                 >
                   Scan Another
                 </button>

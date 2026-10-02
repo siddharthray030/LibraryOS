@@ -10,8 +10,8 @@ function sleep(ms) {
 
 export default function Login() {
   const { authError } = useAuth();
-  const emailId       = useId();
-  const passwordId    = useId();
+  const emailId    = useId();
+  const passwordId = useId();
 
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
@@ -19,6 +19,7 @@ export default function Login() {
   const [error, setError]       = useState("");
   const [loading, setLoading]   = useState(false);
   const [mounted, setMounted]   = useState(false);
+  const [shakeKey, setShakeKey] = useState(0); // retrigger shake
 
   const { check, recordFailure, recordSuccess, blocked, remaining } = useRateLimit();
 
@@ -36,6 +37,7 @@ export default function Login() {
 
     if (!email.trim() || !password) {
       setError("Invalid email or password.");
+      setShakeKey(k => k + 1);
       return;
     }
 
@@ -48,39 +50,28 @@ export default function Login() {
     } catch (err) {
       recordFailure();
       setError(err.message || "Invalid email or password.");
+      setShakeKey(k => k + 1);
     } finally {
       setLoading(false);
     }
   };
 
-  const isDisabled  = loading || blocked;
+  const isDisabled   = loading || blocked;
   const displayError = authError || error;
 
   return (
     <>
       <style>{`
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to   { opacity: 1; transform: translateY(0);    }
+        @keyframes loginShake {
+          0%, 100% { transform: translateX(0); }
+          15%       { transform: translateX(-6px); }
+          30%       { transform: translateX(6px); }
+          45%       { transform: translateX(-4px); }
+          60%       { transform: translateX(4px); }
+          75%       { transform: translateX(-2px); }
+          90%       { transform: translateX(2px); }
         }
-        .fade-up { animation: fadeUp 0.5s cubic-bezier(.22,.68,0,1.15) both; }
-        .login-input {
-          width: 100%;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.08);
-          color: #e5e7eb;
-          font-size: 0.9rem;
-          padding: 0.75rem 1rem;
-          border-radius: 0.5rem;
-          outline: none;
-          transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        .login-input::placeholder { color: #4b5563; }
-        .login-input:focus {
-          border-color: rgba(245,166,35,0.6);
-          box-shadow: 0 0 0 3px rgba(245,166,35,0.12);
-        }
-        .login-input:disabled { opacity: 0.5; cursor: not-allowed; }
+        .login-shake { animation: loginShake 0.4s ease both; }
       `}</style>
 
       {/* Full-screen background */}
@@ -90,20 +81,16 @@ export default function Login() {
       >
         {/* Warm amber radial glow — centre-left */}
         <div style={{
-          position: "absolute",
-          top: "50%", left: "30%",
+          position: "absolute", top: "50%", left: "30%",
           transform: "translate(-50%, -55%)",
-          width: 560, height: 560,
-          borderRadius: "50%",
+          width: 560, height: 560, borderRadius: "50%",
           background: "radial-gradient(circle, rgba(200,120,20,0.22) 0%, transparent 70%)",
           pointerEvents: "none",
         }} />
         {/* Cool blue glow — right */}
         <div style={{
-          position: "absolute",
-          bottom: "10%", right: "-5%",
-          width: 420, height: 420,
-          borderRadius: "50%",
+          position: "absolute", bottom: "10%", right: "-5%",
+          width: 420, height: 420, borderRadius: "50%",
           background: "radial-gradient(circle, rgba(59,80,180,0.18) 0%, transparent 70%)",
           pointerEvents: "none",
         }} />
@@ -114,21 +101,21 @@ export default function Login() {
           style={{
             maxWidth: 400,
             opacity: mounted ? 1 : 0,
-            transition: "opacity 0.15s",
+            transition: "opacity 0.15s ease",
           }}
         >
-          {/* Logo + Title */}
-          <div className="fade-up flex flex-col items-center text-center mb-7" style={{ animationDelay: "0ms" }}>
-            {/* Icon — amber square with coloured grid squares inside */}
-            <div style={{
-              width: 56, height: 56,
-              borderRadius: 14,
-              background: "linear-gradient(135deg, #f5a623 0%, #e08910 100%)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              marginBottom: 16,
-              boxShadow: "0 8px 32px rgba(245,166,35,0.28)",
-            }}>
-              {/* 2×2 coloured squares to match Figma logo */}
+          {/* Logo + Title — fades up with stagger */}
+          <div className="anim-fade-up flex flex-col items-center text-center mb-7" style={{ animationDelay: "0ms" }}>
+            <div
+              className="anim-scale-in"
+              style={{
+                width: 56, height: 56, borderRadius: 14,
+                background: "linear-gradient(135deg, #f5a623 0%, #e08910 100%)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                marginBottom: 16,
+                boxShadow: "0 8px 32px rgba(245,166,35,0.28)",
+              }}
+            >
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 3 }}>
                 <div style={{ width: 11, height: 11, borderRadius: 2, background: "#22c55e" }} />
                 <div style={{ width: 11, height: 11, borderRadius: 2, background: "#3b82f6" }} />
@@ -145,9 +132,9 @@ export default function Login() {
             </p>
           </div>
 
-          {/* Login Card */}
+          {/* Login Card — slightly delayed fade-up */}
           <div
-            className="fade-up"
+            className="anim-fade-up"
             style={{
               animationDelay: "80ms",
               background: "rgba(255,255,255,0.04)",
@@ -159,14 +146,9 @@ export default function Login() {
               boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
             }}
           >
-            {/* Card heading */}
             <h2 style={{
-              color: "#fff",
-              fontSize: "1.2rem",
-              fontWeight: 700,
-              marginBottom: "1.5rem",
-              fontStyle: "italic",
-              letterSpacing: "0.01em",
+              color: "#fff", fontSize: "1.2rem", fontWeight: 700,
+              marginBottom: "1.5rem", fontStyle: "italic", letterSpacing: "0.01em",
             }}>
               Admin Sign In
             </h2>
@@ -174,13 +156,9 @@ export default function Login() {
             {/* Auth / role error */}
             {authError && (
               <div role="alert" style={{
-                marginBottom: "1rem",
-                padding: "0.65rem 1rem",
-                borderRadius: 8,
-                background: "rgba(127,29,29,0.5)",
-                border: "1px solid rgba(153,27,27,0.5)",
-                color: "#fca5a5",
-                fontSize: "0.82rem",
+                marginBottom: "1rem", padding: "0.65rem 1rem", borderRadius: 8,
+                background: "rgba(127,29,29,0.5)", border: "1px solid rgba(153,27,27,0.5)",
+                color: "#fca5a5", fontSize: "0.82rem",
               }}>
                 {authError}
               </div>
@@ -189,13 +167,9 @@ export default function Login() {
             {/* Lockout */}
             {blocked && (
               <div role="alert" aria-live="polite" style={{
-                marginBottom: "1rem",
-                padding: "0.65rem 1rem",
-                borderRadius: 8,
-                background: "rgba(120,53,15,0.4)",
-                border: "1px solid rgba(180,83,9,0.4)",
-                color: "#fbbf24",
-                fontSize: "0.82rem",
+                marginBottom: "1rem", padding: "0.65rem 1rem", borderRadius: 8,
+                background: "rgba(120,53,15,0.4)", border: "1px solid rgba(180,83,9,0.4)",
+                color: "#fbbf24", fontSize: "0.82rem",
               }}>
                 Too many attempts. Try again in{" "}
                 <strong>{Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, "0")}</strong>.
@@ -203,8 +177,8 @@ export default function Login() {
             )}
 
             <form onSubmit={handleSubmit} noValidate>
-              {/* Email / Username */}
-              <div style={{ marginBottom: "1rem" }}>
+              {/* Email */}
+              <div style={{ marginBottom: "1rem" }} className="anim-fade-up anim-delay-2">
                 <label
                   htmlFor={emailId}
                   style={{ display: "block", color: "#9ca3af", fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}
@@ -227,7 +201,7 @@ export default function Login() {
               </div>
 
               {/* Password */}
-              <div style={{ marginBottom: "1.25rem" }}>
+              <div style={{ marginBottom: "1.25rem" }} className="anim-fade-up anim-delay-3">
                 <label
                   htmlFor={passwordId}
                   style={{ display: "block", color: "#9ca3af", fontSize: "0.7rem", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.5rem" }}
@@ -258,6 +232,7 @@ export default function Login() {
                       background: "none", border: "none", cursor: "pointer",
                       color: "#4b5563", padding: 4,
                       display: "flex", alignItems: "center",
+                      transition: "color 0.15s ease",
                     }}
                   >
                     {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -265,17 +240,19 @@ export default function Login() {
                 </div>
               </div>
 
-              {/* Generic error */}
+              {/* Error — shake animation on key change */}
               {displayError && !authError && (
-                <div role="alert" aria-live="assertive" style={{
-                  marginBottom: "1rem",
-                  padding: "0.65rem 1rem",
-                  borderRadius: 8,
-                  background: "rgba(127,29,29,0.5)",
-                  border: "1px solid rgba(153,27,27,0.5)",
-                  color: "#fca5a5",
-                  fontSize: "0.82rem",
-                }}>
+                <div
+                  key={shakeKey}
+                  role="alert"
+                  aria-live="assertive"
+                  className={shakeKey > 0 ? "login-shake" : ""}
+                  style={{
+                    marginBottom: "1rem", padding: "0.65rem 1rem", borderRadius: 8,
+                    background: "rgba(127,29,29,0.5)", border: "1px solid rgba(153,27,27,0.5)",
+                    color: "#fca5a5", fontSize: "0.82rem",
+                  }}
+                >
                   {displayError}
                 </div>
               )}
@@ -284,6 +261,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={isDisabled}
+                className="anim-fade-up anim-delay-4"
                 style={{
                   width: "100%",
                   padding: "0.85rem",
@@ -300,12 +278,17 @@ export default function Login() {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 8,
-                  transition: "opacity 0.2s",
+                  transition: "opacity 0.2s ease, transform 0.12s ease, box-shadow 0.15s ease",
                   boxShadow: isDisabled ? "none" : "0 4px 20px rgba(245,166,35,0.3)",
+                  transform: "translateY(0)",
                 }}
+                onMouseEnter={e => { if (!isDisabled) e.currentTarget.style.transform = "translateY(-1px)"; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; }}
+                onMouseDown={e => { if (!isDisabled) e.currentTarget.style.transform = "scale(0.97)"; }}
+                onMouseUp={e => { if (!isDisabled) e.currentTarget.style.transform = "translateY(-1px)"; }}
               >
                 {loading
-                  ? <><Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Signing in...</>
+                  ? <><Loader2 size={16} className="anim-spin" /> Signing in...</>
                   : "Sign In →"
                 }
               </button>
@@ -314,17 +297,13 @@ export default function Login() {
 
           {/* Footer */}
           <p
-            className="fade-up"
+            className="anim-fade-up"
             style={{ animationDelay: "160ms", textAlign: "center", color: "#374151", fontSize: "0.72rem", marginTop: "1.5rem" }}
           >
             LibraryOS v2.0 · Admin access only
           </p>
         </div>
       </div>
-
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
     </>
   );
 }

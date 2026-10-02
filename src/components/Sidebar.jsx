@@ -3,7 +3,7 @@ import {
   LayoutDashboard, BookOpen, GraduationCap,
   ArrowLeftRight, History, LogOut, X,
   AlertTriangle, FileText, BarChart2, Settings,
-  Users, HardDrive, ShieldCheck,
+  Users, HardDrive,
 } from 'lucide-react';
 import { PERMISSIONS } from '../services/permissions';
 
@@ -15,14 +15,16 @@ const ALL_NAV = [
   { id: 'loans',       label: 'Loan History',      icon: History },
   { id: 'overdue',     label: 'Overdue',           icon: AlertTriangle },
   { id: 'reports',     label: 'Reports',           icon: BarChart2 },
-  { id: 'activitylog', label: 'Activity Log',      icon: FileText,       permission: PERMISSIONS.VIEW_AUDIT_LOGS },
-  { id: 'staff',       label: 'Staff Management',  icon: Users,          permission: PERMISSIONS.MANAGE_USERS },
-  { id: 'backup',      label: 'Backup & Restore',  icon: HardDrive,      permission: PERMISSIONS.BACKUP_RESTORE },
-  { id: 'settings',    label: 'Settings',          icon: Settings,       permission: PERMISSIONS.MANAGE_SETTINGS },
+  { id: 'activitylog', label: 'Activity Log',      icon: FileText,   permission: PERMISSIONS.VIEW_AUDIT_LOGS },
+  { id: 'staff',       label: 'Staff Management',  icon: Users,      permission: PERMISSIONS.MANAGE_USERS },
+  { id: 'backup',      label: 'Backup & Restore',  icon: HardDrive,  permission: PERMISSIONS.BACKUP_RESTORE },
+  { id: 'settings',    label: 'Settings',          icon: Settings,   permission: PERMISSIONS.MANAGE_SETTINGS },
 ];
 
 export default function Sidebar({ activePage, onNavigate, onLogout, mobileOpen, onMobileClose }) {
   const { profile, role, hasPerm } = useAuth();
+
+  const visibleNav = ALL_NAV.filter(item => !item.permission || hasPerm(item.permission));
 
   const content = (
     <aside
@@ -55,19 +57,28 @@ export default function Sidebar({ activePage, onNavigate, onLogout, mobileOpen, 
         <span className="text-[#374151] text-[9px] font-bold tracking-[0.15em] uppercase px-2">Menu</span>
       </div>
       <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
-        {ALL_NAV.filter(item => !item.permission || hasPerm(item.permission)).map(({ id, label, icon: Icon }) => {
+        {visibleNav.map(({ id, label, icon: Icon }, index) => {
           const active = activePage === id;
           return (
             <button
               key={id}
               onClick={() => { onNavigate(id); onMobileClose?.(); }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-left border-l-2 ${
+              className={[
+                'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-left',
+                'border-l-2 nav-item',
                 active
-                  ? 'bg-[#f5a623]/10 text-[#f5a623] border-[#f5a623]'
-                  : 'text-[#6b7280] hover:text-[#d1d5db] hover:bg-[#131720] border-transparent'
-              }`}
+                  ? 'bg-[#f5a623]/10 text-[#f5a623] border-[#f5a623] nav-active'
+                  : 'text-[#6b7280] hover:text-[#d1d5db] hover:bg-[#131720] border-transparent',
+              ].join(' ')}
+              style={{ animationDelay: `${index * 30}ms` }}
             >
-              <Icon size={15} className="flex-shrink-0" />
+              <Icon
+                size={15}
+                className={[
+                  'flex-shrink-0 transition-transform duration-150',
+                  active ? 'scale-110' : '',
+                ].join(' ')}
+              />
               {label}
             </button>
           );
@@ -87,7 +98,7 @@ export default function Sidebar({ activePage, onNavigate, onLogout, mobileOpen, 
         </div>
         <button
           onClick={onLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#ef4444] hover:bg-red-950/30 transition-colors"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#ef4444] hover:bg-red-950/30 nav-item"
         >
           <LogOut size={15} />
           Sign Out
@@ -103,20 +114,20 @@ export default function Sidebar({ activePage, onNavigate, onLogout, mobileOpen, 
         {content}
       </div>
 
-      {/* Mobile — drawer */}
+      {/* Mobile — drawer with overlay */}
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-40 flex">
-          {/* Backdrop */}
+          {/* Animated backdrop */}
           <div
-            className="absolute inset-0 bg-black/60"
+            className="absolute inset-0 bg-black/60 anim-overlay"
             onClick={onMobileClose}
           />
-          {/* Drawer */}
-          <div className="relative z-50 h-full">
+          {/* Drawer slides in from left */}
+          <div className="relative z-50 h-full anim-slide-in-l">
             {content}
             <button
               onClick={onMobileClose}
-              className="absolute top-4 right-[-40px] text-white bg-[#131720] border border-[#1e2330] rounded-lg p-1.5"
+              className="absolute top-4 right-[-40px] text-white bg-[#131720] border border-[#1e2330] rounded-lg p-1.5 btn-interactive"
             >
               <X size={16} />
             </button>

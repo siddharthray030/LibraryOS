@@ -89,7 +89,7 @@ export default function GlobalSearch({ onNavigate, onSelectBook, onSelectStudent
             if (queryText.trim()) setIsOpen(true);
           }}
           placeholder="Global search (Books, Authors, ISBN, Students, IDs)..."
-          className="w-full bg-[#131720] border border-[#1e2330] text-sm text-[#e5e7eb] placeholder-[#4b5563] pl-10 pr-8 py-2 rounded-xl outline-none focus:border-[#f5a623] transition-colors"
+          className="w-full bg-[#131720] border border-[#1e2330] text-sm text-[#e5e7eb] placeholder-[#4b5563] pl-10 pr-8 py-2 rounded-xl outline-none input-animated"
         />
         {queryText && (
           <button
@@ -97,16 +97,16 @@ export default function GlobalSearch({ onNavigate, onSelectBook, onSelectStudent
               setQueryText('');
               setIsOpen(false);
             }}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#4b5563] hover:text-white p-0.5 rounded"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#4b5563] hover:text-white p-0.5 rounded btn-interactive"
           >
             <X size={14} />
           </button>
         )}
       </div>
 
-      {/* Results Dropdown */}
+      {/* Results Dropdown — fades + slides down */}
       {isOpen && debouncedQuery && (
-        <div className="absolute left-0 right-0 top-12 z-50 bg-[#131720] border border-[#1e2330] rounded-xl shadow-2xl overflow-hidden max-h-96 overflow-y-auto">
+        <div className="absolute left-0 right-0 top-12 z-50 bg-[#131720] border border-[#1e2330] rounded-xl shadow-2xl overflow-hidden max-h-96 overflow-y-auto anim-fade-down">
           {totalResults === 0 ? (
             <div className="p-6 text-center text-xs text-[#6b7280]">
               No results found for <span className="text-white font-medium">"{queryText}"</span>

@@ -1,7 +1,7 @@
 export default function Skeleton({ className = '' }) {
   return (
     <span
-      className={['bg-[#1e2330] rounded animate-pulse inline-block', className].join(' ')}
+      className={['skeleton-shimmer rounded inline-block', className].join(' ')}
     />
   );
 }
@@ -28,6 +28,20 @@ export function SkeletonTable({ rows = 5, cols = 5 }) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/** Card-style skeleton for dashboard stat cards */
+export function SkeletonCard({ className = '' }) {
+  return (
+    <div className={['bg-[#131720] border border-[#1e2330] rounded-xl p-4 flex-1 min-w-0 space-y-3', className].join(' ')}>
+      <div className="flex items-start justify-between">
+        <Skeleton className="h-2.5 w-20" />
+        <Skeleton className="h-4 w-4 rounded" />
+      </div>
+      <Skeleton className="h-7 w-16" />
+      <Skeleton className="h-2.5 w-28" />
     </div>
   );
 }
