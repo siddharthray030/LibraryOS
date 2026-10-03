@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useLibraryData } from '../context/LibraryDataContext';
 import {
-  subscribeIssuedBooks, subscribeBooks, subscribeStudents,
   issueBook, returnBook, renewBook,
 } from '../services/firestore';
 import { useSettings } from '../context/SettingsContext';
@@ -16,11 +16,11 @@ import {
 export default function IssueReturn() {
   const toast        = useToast();
   const { settings } = useSettings();
+  // Use shared data from LibraryDataContext — no additional Firestore subscriptions needed
+  const { books, students, issuedBooks: issued } = useLibraryData();
 
   const [tab, setTab]         = useState('issue');
-  const [issued, setIssued]   = useState([]);
-  const [books, setBooks]     = useState([]);
-  const [students, setStudents] = useState([]);
+
 
   // Issue form
   const [selBook, setSelBook]         = useState(null);
@@ -47,12 +47,8 @@ export default function IssueReturn() {
     setDueDate(d.toISOString().slice(0, 10));
   }, [settings.defaultLoanDuration, settings.loanPeriodDays]);
 
-  useEffect(() => {
-    const u1 = subscribeIssuedBooks(setIssued);
-    const u2 = subscribeBooks(setBooks);
-    const u3 = subscribeStudents(setStudents);
-    return () => { u1(); u2(); u3(); };
-  }, []);
+
+
 
   const activeIssues   = issued.filter(l => l.status === 'issued' || l.status === 'Issued');
   const availableBooks = books.filter(b => (b.availableQuantity ?? b.available ?? 0) > 0);

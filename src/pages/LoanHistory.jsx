@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { subscribeIssuedBooks, renewBook } from '../services/firestore';
+import { renewBook } from '../services/firestore';
+import { useLibraryData } from '../context/LibraryDataContext';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import { calculateFine, calcOverdueDays } from '../services/settings';
@@ -47,19 +48,13 @@ export default function LoanHistory() {
   const { settings } = useSettings();
   const { canRenewBooks, canSendReminders } = useAuth();
 
-  const [loans, setLoans]               = useState([]);
-  const [loading, setLoading]           = useState(true);
+  const { issuedBooks: loans, loading } = useLibraryData();
   const [searchInput, setSearchInput]   = useState('');
   const [searchQuery, setSearchQuery]   = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [renewingId, setRenewingId]     = useState(null);
   const [remindingId, setRemindingId]   = useState(null);
   const debounceRef = useRef(null);
-
-  useEffect(() => {
-    const unsub = subscribeIssuedBooks(data => { setLoans(data); setLoading(false); });
-    return unsub;
-  }, []);
 
   const handleSearch = useCallback(val => {
     setSearchInput(val);

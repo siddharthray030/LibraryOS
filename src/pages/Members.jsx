@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useLibraryData } from '../context/LibraryDataContext';
 import {
-  subscribeStudents,
   addStudent, updateStudent, deleteStudent,
   studentIdExists, getStudentHistory, updateStudentStatus, renewBook,
 } from '../services/firestore';
+
 import { useToast } from '../context/ToastContext';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
@@ -83,8 +84,8 @@ export default function Students() {
   const { settings } = useSettings();
   const { canDeleteStudents, canManageStudents, canChangeStudentStatus, canRenewBooks, canSendReminders } = useAuth();
 
-  const [students, setStudents] = useState([]);
-  const [loading, setLoading]   = useState(true);
+  // Use shared data from LibraryDataContext — no additional Firestore subscriptions needed
+  const { students, loading } = useLibraryData();
 
   // Status Filter
   const [statusFilter, setStatusFilter] = useState('All');
@@ -117,12 +118,8 @@ export default function Students() {
   const [renewingId, setRenewingId]         = useState(null);
   const [sendingReminderId, setSendingReminderId] = useState(null);
 
-  useEffect(() => {
-    const unsub = subscribeStudents(data => { setStudents(data); setLoading(false); });
-    return unsub;
-  }, []);
-
   useEffect(() => { setPage(1); }, [searchQuery, sortKey, sortDir]);
+
 
   const handleSearchChange = useCallback(e => {
     setSearchInput(e.target.value);

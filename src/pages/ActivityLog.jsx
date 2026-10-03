@@ -128,8 +128,7 @@ export default function ActivityLog() {
   // Load on mount and filter change
   useEffect(() => {
     loadFirst(actionFilter, entityFilter);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [actionFilter, entityFilter]);
+  }, [actionFilter, entityFilter, loadFirst]);
 
   return (
     <div className="p-4 sm:p-6 min-h-screen bg-[#0f1117]">

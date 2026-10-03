@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { subscribeIssuedBooks } from '../services/firestore';
+import { useState } from 'react';
+import { useLibraryData } from '../context/LibraryDataContext';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import { calcOverdueDays, calculateFine } from '../services/settings';
@@ -24,16 +24,10 @@ export default function Overdue() {
   const { canSendReminders } = useAuth();
   const toast        = useToast();
 
-  const [issued, setIssued]           = useState([]);
-  const [loading, setLoading]         = useState(true);
+  const { issuedBooks: issued, loading } = useLibraryData();
   const [search, setSearch]           = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [sendingId, setSendingId]     = useState(null);
-
-  useEffect(() => {
-    const unsub = subscribeIssuedBooks(data => { setIssued(data); setLoading(false); });
-    return unsub;
-  }, []);
 
   // Only active (not returned) issues that are past due date
   const overdueRecords = issued

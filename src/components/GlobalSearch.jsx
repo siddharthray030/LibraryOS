@@ -1,24 +1,18 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { subscribeBooks, subscribeStudents } from '../services/firestore';
+import { useState, useEffect, useRef } from 'react';
+import { useLibraryData } from '../context/LibraryDataContext';
 import { Search, BookOpen, GraduationCap, X, ChevronRight } from 'lucide-react';
 
+/**
+ * GlobalSearch — uses the shared LibraryDataContext so it does NOT
+ * create its own Firestore subscriptions. This prevents duplicate
+ * reads that previously happened alongside the pages' own listeners.
+ */
 export default function GlobalSearch({ onNavigate, onSelectBook, onSelectStudent }) {
+  const { books, students } = useLibraryData();
   const [queryText, setQueryText] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [books, setBooks] = useState([]);
-  const [students, setStudents] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
-
-  // Subscribe to books and students for instant client-side index lookup
-  useEffect(() => {
-    const unsubBooks = subscribeBooks(setBooks);
-    const unsubStudents = subscribeStudents(setStudents);
-    return () => {
-      unsubBooks();
-      unsubStudents();
-    };
-  }, []);
 
   // Debounce search input
   useEffect(() => {
@@ -41,18 +35,18 @@ export default function GlobalSearch({ onNavigate, onSelectBook, onSelectStudent
 
   // Filter books and students
   const filteredBooks = debouncedQuery ? books.filter(b => {
-    const title = (b.title || '').toLowerCase();
-    const author = (b.author || '').toLowerCase();
-    const isbn = (b.isbn || '').toLowerCase();
-    const libId = (b.libraryId || '').toLowerCase();
+    const title   = (b.title   || '').toLowerCase();
+    const author  = (b.author  || '').toLowerCase();
+    const isbn    = (b.isbn    || '').toLowerCase();
+    const libId   = (b.libraryId || '').toLowerCase();
     const barcode = (b.barcode || '').toLowerCase();
     return title.includes(debouncedQuery) || author.includes(debouncedQuery) || isbn.includes(debouncedQuery) || libId.includes(debouncedQuery) || barcode.includes(debouncedQuery);
   }).slice(0, 5) : [];
 
   const filteredStudents = debouncedQuery ? students.filter(s => {
-    const name = (s.name || '').toLowerCase();
-    const id = (s.studentId || s.rollNo || '').toLowerCase();
-    const email = (s.email || '').toLowerCase();
+    const name   = (s.name || '').toLowerCase();
+    const id     = (s.studentId || s.rollNo || '').toLowerCase();
+    const email  = (s.email || '').toLowerCase();
     const course = (s.course || s.class || '').toLowerCase();
     return name.includes(debouncedQuery) || id.includes(debouncedQuery) || email.includes(debouncedQuery) || course.includes(debouncedQuery);
   }).slice(0, 5) : [];
@@ -109,7 +103,7 @@ export default function GlobalSearch({ onNavigate, onSelectBook, onSelectStudent
         <div className="absolute left-0 right-0 top-12 z-50 bg-[#131720] border border-[#1e2330] rounded-xl shadow-2xl overflow-hidden max-h-96 overflow-y-auto anim-fade-down">
           {totalResults === 0 ? (
             <div className="p-6 text-center text-xs text-[#6b7280]">
-              No results found for <span className="text-white font-medium">"{queryText}"</span>
+              No results found for <span className="text-white font-medium">&quot;{queryText}&quot;</span>
             </div>
           ) : (
             <div className="divide-y divide-[#1e2330]">

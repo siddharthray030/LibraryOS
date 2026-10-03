@@ -1,6 +1,7 @@
 import { useAuth } from './context/AuthContext';
 import { useSettings, SettingsProvider } from './context/SettingsContext';
 import { NotificationsProvider } from './context/NotificationsContext';
+import { LibraryDataProvider } from './context/LibraryDataContext';
 import Sidebar from './components/Sidebar';
 import NotificationBell from './components/NotificationBell';
 import GlobalSearch from './components/GlobalSearch';
@@ -103,87 +104,91 @@ function AppInner() {
   }
 
   return (
-    <NotificationsProvider settings={settings}>
-      <div className="flex h-screen overflow-hidden bg-[#0f1117] text-white">
-        <Sidebar
-          activePage={activePage}
-          onNavigate={handleNavigate}
-          onLogout={logout}
-          mobileOpen={mobileOpen}
-          onMobileClose={() => setMobileOpen(false)}
-        />
+    // LibraryDataProvider wraps the entire authenticated shell, providing ONE shared
+    // set of real-time Firestore listeners used by all pages and components.
+    <LibraryDataProvider>
+      <NotificationsProvider settings={settings}>
+        <div className="flex h-screen overflow-hidden bg-[#0f1117] text-white">
+          <Sidebar
+            activePage={activePage}
+            onNavigate={handleNavigate}
+            onLogout={logout}
+            mobileOpen={mobileOpen}
+            onMobileClose={() => setMobileOpen(false)}
+          />
 
-        {/* Main layout area */}
-        <div className="flex-1 flex flex-col h-screen overflow-hidden bg-[#0f1117] lg:ml-[200px]">
-          {/* Top Navigation Bar */}
-          <header className="sticky top-0 z-30 h-16 bg-[#0b0f1a]/90 backdrop-blur-md border-b border-[#1e2330] px-4 sm:px-6 flex items-center justify-between gap-4 shrink-0">
-            {/* Left: Mobile hamburger */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setMobileOpen(true)}
-                className="lg:hidden bg-[#131720] border border-[#1e2330] text-white p-2 rounded-lg hover:bg-[#1a2035] btn-interactive"
-                aria-label="Open menu"
-              >
-                <Menu size={18} />
-              </button>
-            </div>
+          {/* Main layout area */}
+          <div className="flex-1 flex flex-col h-screen overflow-hidden bg-[#0f1117] lg:ml-[200px]">
+            {/* Top Navigation Bar */}
+            <header className="sticky top-0 z-30 h-16 bg-[#0b0f1a]/90 backdrop-blur-md border-b border-[#1e2330] px-4 sm:px-6 flex items-center justify-between gap-4 shrink-0">
+              {/* Left: Mobile hamburger */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setMobileOpen(true)}
+                  className="lg:hidden bg-[#131720] border border-[#1e2330] text-white p-2 rounded-lg hover:bg-[#1a2035] btn-interactive"
+                  aria-label="Open menu"
+                >
+                  <Menu size={18} />
+                </button>
+              </div>
 
-            {/* Center: Global Search Bar */}
-            <div className="flex-1 max-w-lg mx-auto">
-              <GlobalSearch onNavigate={handleNavigate} />
-            </div>
+              {/* Center: Global Search Bar */}
+              <div className="flex-1 max-w-lg mx-auto">
+                <GlobalSearch onNavigate={handleNavigate} />
+              </div>
 
-            {/* Right: Notifications & Quick Profile Role Badge */}
-            <div className="flex items-center gap-3">
-              <NotificationBell onNavigate={handleNavigate} />
-              <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-[#1e2330]">
-                <div className="text-right">
-                  <div className="text-xs font-semibold text-white truncate max-w-[120px]">
-                    {profile?.name || profile?.email?.split('@')[0] || 'Staff'}
-                  </div>
-                  <div className="text-[10px] text-[#f5a623] font-bold uppercase tracking-wider">
-                    {role || 'ADMIN'}
+              {/* Right: Notifications & Quick Profile Role Badge */}
+              <div className="flex items-center gap-3">
+                <NotificationBell onNavigate={handleNavigate} />
+                <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-[#1e2330]">
+                  <div className="text-right">
+                    <div className="text-xs font-semibold text-white truncate max-w-[120px]">
+                      {profile?.name || profile?.email?.split('@')[0] || 'Staff'}
+                    </div>
+                    <div className="text-[10px] text-[#f5a623] font-bold uppercase tracking-wider">
+                      {role || 'ADMIN'}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </header>
+            </header>
 
-          {/* Main scrollable content view — key forces re-mount on navigation */}
-          <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
-            <PageComponent key={pageKey} onNavigate={handleNavigate} />
-          </main>
+            {/* Main scrollable content view — key forces re-mount on navigation */}
+            <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
+              <PageComponent key={pageKey} onNavigate={handleNavigate} />
+            </main>
 
-          {/* Mobile Bottom Bar */}
-          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0b0f1a]/95 backdrop-blur-md border-t border-[#1e2330] py-1.5 px-3 flex items-center justify-around">
-            {[
-              { id: 'dashboard', Icon: LayoutDashboard, label: 'Dashboard' },
-              { id: 'books',     Icon: BookOpen,        label: 'Books' },
-              { id: 'issue',     Icon: ArrowLeftRight,  label: 'Circulate' },
-              { id: 'members',   Icon: GraduationCap,   label: 'Students' },
-            ].map(({ id, Icon, label }) => (
+            {/* Mobile Bottom Bar */}
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0b0f1a]/95 backdrop-blur-md border-t border-[#1e2330] py-1.5 px-3 flex items-center justify-around">
+              {[
+                { id: 'dashboard', Icon: LayoutDashboard, label: 'Dashboard' },
+                { id: 'books',     Icon: BookOpen,        label: 'Books' },
+                { id: 'issue',     Icon: ArrowLeftRight,  label: 'Circulate' },
+                { id: 'members',   Icon: GraduationCap,   label: 'Students' },
+              ].map(({ id, Icon, label }) => (
+                <button
+                  key={id}
+                  onClick={() => handleNavigate(id)}
+                  className={`flex flex-col items-center gap-0.5 p-1 text-xs font-medium btn-interactive ${
+                    activePage === id ? 'text-[#f5a623]' : 'text-[#6b7280]'
+                  }`}
+                >
+                  <Icon size={18} />
+                  <span className="text-[10px]">{label}</span>
+                </button>
+              ))}
               <button
-                key={id}
-                onClick={() => handleNavigate(id)}
-                className={`flex flex-col items-center gap-0.5 p-1 text-xs font-medium btn-interactive ${
-                  activePage === id ? 'text-[#f5a623]' : 'text-[#6b7280]'
-                }`}
+                onClick={() => setMobileOpen(true)}
+                className="flex flex-col items-center gap-0.5 p-1 text-xs font-medium text-[#6b7280] btn-interactive"
               >
-                <Icon size={18} />
-                <span className="text-[10px]">{label}</span>
+                <Menu size={18} />
+                <span className="text-[10px]">More</span>
               </button>
-            ))}
-            <button
-              onClick={() => setMobileOpen(true)}
-              className="flex flex-col items-center gap-0.5 p-1 text-xs font-medium text-[#6b7280] btn-interactive"
-            >
-              <Menu size={18} />
-              <span className="text-[10px]">More</span>
-            </button>
+            </div>
           </div>
         </div>
-      </div>
-    </NotificationsProvider>
+      </NotificationsProvider>
+    </LibraryDataProvider>
   );
 }
 

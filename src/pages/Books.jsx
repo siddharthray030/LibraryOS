@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { subscribeBooks, addBook, updateBook, deleteBook } from '../services/firestore';
+import { useLibraryData } from '../context/LibraryDataContext';
+import { addBook, updateBook, deleteBook } from '../services/firestore';
+
 import { useToast } from '../context/ToastContext';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
@@ -102,9 +104,8 @@ export default function Books() {
   const { settings }     = useSettings();
   const { canDeleteBooks, canManageBooks } = useAuth();
 
-  // Data
-  const [books, setBooks]     = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Use shared data from LibraryDataContext — no additional Firestore subscriptions needed
+  const { books, loading } = useLibraryData();
 
   // Scanner & Print Modals
   const [scannerOpen, setScannerOpen]         = useState(false);
@@ -134,13 +135,9 @@ export default function Books() {
 
   const debounceRef = useRef(null);
 
-  useEffect(() => {
-    const unsub = subscribeBooks(data => { setBooks(data); setLoading(false); });
-    return unsub;
-  }, []);
-
   // Reset page on filter change
   useEffect(() => { setPage(1); }, [searchQuery, catFilter, availFilter, sortDir]);
+
 
   const handleSearchChange = useCallback(val => {
     setSearchInput(val);

@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { subscribeBooks, subscribeStudents, subscribeIssuedBooks } from '../services/firestore';
+import { useState, useMemo } from 'react';
+import { useLibraryData } from '../context/LibraryDataContext';
 import { useSettings } from '../context/SettingsContext';
 import { calculateFine, calcOverdueDays } from '../services/settings';
 import { useToast } from '../context/ToastContext';
@@ -161,22 +161,10 @@ const RANGE_OPTIONS = [
 
 export default function Reports() {
   const { settings } = useSettings();
-  const [books,    setBooks]    = useState([]);
-  const [students, setStudents] = useState([]);
-  const [issues,   setIssues]   = useState([]);
-  const [loading,  setLoading]  = useState(true);
+  const { books, students, issuedBooks: issues, loading } = useLibraryData();
 
   const [rangeKey, setRangeKey] = useState('month');
   const [custom, setCustom]     = useState({ from: '', to: '' });
-
-  useEffect(() => {
-    let b = false, s = false, i = false;
-    const done = () => { if (b && s && i) setLoading(false); };
-    const u1 = subscribeBooks(d   => { setBooks(d);    b = true; done(); });
-    const u2 = subscribeStudents(d => { setStudents(d); s = true; done(); });
-    const u3 = subscribeIssuedBooks(d => { setIssues(d); i = true; done(); });
-    return () => { u1(); u2(); u3(); };
-  }, []);
 
   const [from, to] = useMemo(() => getRange(rangeKey, custom), [rangeKey, custom]);
 

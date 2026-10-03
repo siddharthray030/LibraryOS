@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { subscribeBooks, subscribeStudents, subscribeIssuedBooks } from '../services/firestore';
+import { useState, useMemo } from 'react';
+import { useLibraryData } from '../context/LibraryDataContext';
 import { useSettings } from '../context/SettingsContext';
 import { calcOverdueDays, calculateFine } from '../services/settings';
 import {
@@ -99,20 +99,10 @@ const DATE_RANGES = [
 
 export default function Dashboard({ onNavigate }) {
   const { settings } = useSettings();
-  const [books, setBooks]       = useState([]);
-  const [students, setStudents] = useState([]);
-  const [loans, setLoans]       = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [range, setRange]       = useState('6m');
+  // Use shared data from LibraryDataContext — no additional Firestore subscriptions needed
+  const { books, students, issuedBooks: loans, loading } = useLibraryData();
+  const [range, setRange] = useState('6m');
 
-  useEffect(() => {
-    let b = false, s = false, l = false;
-    const done = () => { if (b && s && l) setLoading(false); };
-    const u1 = subscribeBooks(d   => { setBooks(d);    b = true; done(); });
-    const u2 = subscribeStudents(d => { setStudents(d); s = true; done(); });
-    const u3 = subscribeIssuedBooks(d => { setLoans(d); l = true; done(); });
-    return () => { u1(); u2(); u3(); };
-  }, []);
 
   // Filter loans based on selected date range
   const filteredLoans = useMemo(() => {
@@ -145,6 +135,11 @@ export default function Dashboard({ onNavigate }) {
   const collectedFines    = loans.filter(l => l.status === 'returned' || l.status === 'Returned').reduce((s, l) => s + (Number(l.fine) || 0), 0);
   const outstandingFines  = overdueIssues.reduce((s, l) => s + calculateFine(l.dueDate, settings), 0);
   const totalFines        = collectedFines + outstandingFines;
+  const lowStockThreshold = settings?.lowStockThreshold ?? 2;
+  const lowStockBooks     = books.filter(b => {
+    const avail = b.availableQuantity ?? b.available ?? 0;
+    return avail <= lowStockThreshold && avail > 0;
+  });
   const returnedCount     = filteredLoans.filter(l => l.status === 'returned' || l.status === 'Returned').length;
   const returnRate        = filteredLoans.length > 0 ? Math.round((returnedCount / filteredLoans.length) * 100) : 100;
   const durations = filteredLoans
@@ -224,9 +219,9 @@ export default function Dashboard({ onNavigate }) {
     { label: 'Available',        value: availCopies,         numericValue: availCopies,     sub: 'on shelf',                      icon: TrendingUp,     iconColor: '#10b981', valueColor: '#10b981' },
     { label: 'Currently Issued', value: activeIssues.length, numericValue: activeIssues.length, sub: `${issuedCopies} copies out`, icon: BookMarked,   iconColor: '#60a5fa', valueColor: '#f5a623' },
     { label: 'Overdue',          value: overdueIssues.length,numericValue: overdueIssues.length, sub: 'action needed',            icon: AlertTriangle, iconColor: '#ef4444', valueColor: '#ef4444' },
+    { label: 'Low Stock Books',  value: lowStockBooks.length,numericValue: lowStockBooks.length, sub: `≤ ${lowStockThreshold} left`, icon: AlertTriangle, iconColor: '#f5a623', valueColor: lowStockBooks.length > 0 ? '#f5a623' : '#10b981' },
     { label: 'Students',         value: totalStudents,       numericValue: totalStudents,   sub: `${activeBorrowersCount} active borrowers`, icon: Users, iconColor: '#8b5cf6', valueColor: '#8b5cf6' },
     { label: 'Return Rate',      value: `${returnRate}%`,    numericValue: returnRate,      sub: 'on-time returns',               icon: Percent,        iconColor: '#10b981', valueColor: '#10b981', badge: 'Healthy' },
-    { label: 'Avg Loan Time',    value: `${avgLoanDuration}d`, numericValue: avgLoanDuration, sub: 'duration per loan',          icon: Clock,          iconColor: '#06b6d4', valueColor: '#06b6d4' },
     { label: 'Total Fines',      value: `₹${totalFines}`,   numericValue: totalFines,      sub: `₹${collectedFines} collected`, icon: DollarSign,     iconColor: '#f97316', valueColor: '#f97316' },
   ];
 
